@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baldi's Basics: 1v1 CANLI SKORLU DÜELLO SİSTEMİ</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        body {
+            margin: 0; padding: 0;
+            background-color: #050505;
+            font-family: 'Press Start 2P', monospace;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; overflow: hidden; color: #fff;
+        }
+
+        #main-layout { display: flex; gap: 20px; align-items: flex-start; position: relative; margin-top: 40px; }
+        #wrapper { position: relative; box-shadow: 0 0 50px rgba(255, 0, 0, 0.3); border: 10px solid #222; }
+
+        #wrapper::after {
+            content: " "; display: block; position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 10; background-size: 100% 4px, 3px 100%; pointer-events: none;
+        }
+
+        #game-container { width: 800px; height: 600px; position: relative; background: #000; display: flex; flex-direction: column; }
+        canvas { width: 100%; height: 450px; background: #111; display: block; }
+
+        /* CANLI ARENA SAYAÇ VE SKOR TABELASI - YUKARI TAŞINDI VE EN ÜSTTE SQUASH EDİLDİ */
+        #live-arena-bar {
+            position: absolute; 
+            top: -65px; 
+            left: 50%; 
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.95); 
+            border: 4px solid #ffcc00; 
+            width: 95%;
+            padding: 8px 12px; 
+            box-sizing: border-box; 
+            display: none;
+            justify-content: space-between; 
+            align-items: center; 
+            z-index: 999; 
+            border-radius: 8px;
+        }
+        .arena-team { font-size: 9px; color: #fff; text-align: center; width: 35%; }
+        .arena-score { font-size: 16px; color: #00ff00; margin-top: 5px; }
+        
+        #arena-timer-box { 
+            font-size: 11px; 
+            background: #ff0000; 
+            padding: 10px 20px; 
+            color: #fff; 
+            text-align: center; 
+            border-radius: 4px;
+            min-width: 140px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+        }
+
+        #ui-bottom {
+            height: 150px; background: #222; border-top: 4px solid #444;
+            display: flex; justify-content: space-around; align-items: center; padding: 0 20px; box-sizing: border-box;
+        }
+
+        .panel-box { background: #000; border: 3px dashed #ff0000; padding: 10px; font-size: 8px; line-height: 1.6; color: #00ff00; min-width: 220px; }
+        #input-zone { display: flex; gap: 10px; }
+        input[type="number"], input[type="text"] { background: #000; border: 3px solid #00ff00; color: #00ff00; font-family: 'Press Start 2P', monospace; text-align: center; outline: none; }
+        input[type="number"] { width: 120px; height: 50px; font-size: 18px; }
+
+        button { height: 56px; padding: 0 20px; background: #00ff00; color: #000; font-family: 'Press Start 2P', monospace; font-size: 11px; border: none; cursor: pointer; font-weight: bold; }
+        button:disabled { background: #444; color: #888; cursor: not-allowed; }
+
+        #event-banner { position: absolute; top: 140px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); border: 2px solid #ffcc00; padding: 10px; font-size: 10px; color: #ffcc00; display: none; text-align: center; z-index: 5; width: 70%; }
+
+        #top-right-hud { position: absolute; top: -10px; right: -380px; width: 360px; display: flex; flex-direction: column; gap: 10px; z-index: 100; }
+        .hud-box { background: #111; border: 4px solid #00ff00; padding: 12px; box-sizing: border-box; font-size: 8px; }
+        .hud-box h4 { margin: 0 0 8px 0; color: #00ff00; text-align: center; font-size: 9px; }
+        
+        #matchmaking-zone { display: flex; gap: 5px; margin-top: 5px; }
+        #matchmaking-zone input { width: 60%; height: 30px; border: 2px solid #ff0000; color: #ff0000; font-size: 8px; background: #000; font-family: 'Press Start 2P'; text-align: center; }
+        #matchmaking-zone button { height: 34px; font-size: 8px; background: #ff0000; color: #fff; }
+
+        #notification-popup { background: #220000; border: 4px solid #ff0000; padding: 12px; display: none; flex-direction: column; gap: 10px; text-align: center; animation: blinker 1.5s linear infinite; }
+        @keyframes blinker { 50% { border-color: #ffaa00; } }
+        .notif-btns { display: flex; justify-content: center; gap: 10px; }
+        .notif-btns button { height: 30px; font-size: 8px; padding: 0 10px; }
+
+        #leaderboard { width: 360px; height: 430px; background: #111; border: 6px double #ff0000; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; margin-top: 10px; }
+        #leaderboard h3 { font-size: 11px; color: #ff0000; text-align: center; margin-top: 0; margin-bottom: 15px; text-shadow: 2px 2px #000; }
+        .leaderboard-list { list-style: none; padding: 0; margin: 0; font-size: 8px; line-height: 2; overflow-y: auto; flex-grow: 1; }
+        .leaderboard-list li { display: flex; flex-direction: column; border-bottom: 1px dashed #333; padding: 6px 0; }
+        .list-row { display: flex; justify-content: space-between; width: 100%; }
+        .list-id { color: #666; font-size: 6px; margin-top: 2px; }
+        #sync-status { font-size: 7px; color: #888; text-align: center; margin-top: 10px; }
+
+        #duel-result-screen { display: none; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.95); z-index: 150; justify-content: center; align-items: center; flex-direction: column; text-align: center; }
+        #result-title { font-size: 32px; margin-bottom: 20px; font-weight: bold; text-shadow: 3px 3px #000; }
+        #result-details { font-size: 10px; line-height: 2; margin-bottom: 30px; color: #ffcc00; }
+
+        #jumpscare { display: none; position: absolute; top:0; left:0; width:100%; height:100%; background: #ff0000; z-index: 99; justify-content: center; align-items: center; flex-direction: column; color: #000; }
+        #jumpscare span { font-size: 35px; margin-bottom: 20px; text-shadow: 2px 2px #fff; }
+        #save-btn { background: #000; color: #fff; border: 2px solid #fff; }
+    </style>
+</head>
+<body>
+
+<div id="main-layout">
+    <div id="wrapper">
+        <div id="game-container">
+            <div id="live-arena-bar">
+                <div class="arena-team">Siz<br><div class="arena-score" id="live-my-score">0</div></div>
+                <div id="arena-timer-box">SÜRE<br><span id="live-countdown">30</span></div>
+                <div class="arena-team">Rakip<br><div class="arena-score" id="live-opp-score" style="color:#ff0000;">0</div></div>
+            </div>
+
+            <div id="duel-result-screen">
+                <div id="result-title">KAZANDIN!</div>
+                <div id="result-details">Skorun: 0 | Rakip Skoru: 0</div>
+                <button onclick="closeResultScreen()" style="background:#00ff00; font-size:10px;">DEVAM ET</button>
+            </div>
+
+            <div id="event-banner">DURUM PANELİ</div>
+            <canvas id="gameCanvas" width="800" height="450"></canvas>
+
+            <div id="ui-bottom">
+                <div class="panel-box">
+                    SKORUNUZ: <span id="score">0</span><br>
+                    BALDI ÖFKESİ: <span id="anger">0</span>/3<br>
+                    <span id="active-effect" style="color: #ffcc00; font-size:7px;">KORİDOR TEMİZ</span>
+                </div>
+                <div id="input-zone">
+                    <input type="number" id="ans" placeholder="?" autofocus>
+                    <button id="submit-btn" onclick="submitAnswer()">GİR</button>
+                </div>
+            </div>
+
+            <div id="jumpscare">
+                <span>YAKALANDIN!</span>
+                <div id="name-form" style="display:flex; flex-direction:column; gap:15px; align-items:center;">
+                    <div style="font-size: 11px; color: #fff;">Skorunu Dünyaya Duyur:</div>
+                    <input type="text" id="player-name" placeholder="İSMİNİZ" maxlength="10" style="background:#fff; color:#000; height:40px; width:220px;">
+                    <button id="save-btn" onclick="saveGlobalScore()">LİSTEYE EKLE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="top-right-hud">
+        <div class="hud-box" style="border-color: #00ff00;">
+            <h4>KİMLİK BİLGİNİZ</h4>
+            <div style="text-align:center; font-size:10px; color:#fff; letter-spacing:1px; margin-bottom:10px;" id="my-id">YÜKLENİYOR...</div>
+            
+            <h4>⚔️ 1v1 DÜELLO BAŞLAT</h4>
+            <div id="matchmaking-zone">
+                <input type="text" id="target-player-id" placeholder="RAKİP ID">
+                <button onclick="sendDuelInvite()">MEYDAN OKU</button>
+            </div>
+        </div>
+
+        <div id="notification-popup">
+            <div style="color:#ff0000; font-weight:bold; font-size:10px; margin-bottom:5px;">⚠️ DÜELLO DAVETİ!</div>
+            <div id="notif-text" style="font-size:7px; line-height:1.4;">Yarışma teklifi var!</div>
+            <div class="notif-btns">
+                <button style="background:#00ff00;" onclick="respondDuel('KABUL_EDILDI')">KABUL ET</button>
+                <button style="background:#ff0000; color:#fff;" onclick="respondDuel('REDDEDILDI')">REDDET</button>
+            </div>
+        </div>
+
+        <div id="leaderboard">
+            <h3>🌍 KÜRESEL REKABET</h3>
+            <ul class="leaderboard-list" id="leaderboard-list">
+                <li>Yükleniyor...</li>
+            </ul>
+            <div id="sync-status">Bağlantı kuruluyor...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyb9jERrcqK1tRBToxKfTvvlI6CzVHmNM75YJ8Wl0atjspyonIOnDqolT6QQL1L-6St/exec";
+
+    function getOrCreatePlayerID() {
+        let localID = localStorage.getItem('baldi_player_id');
+        if (!localID) {
+            const randomNum = Math.floor(1000 + Math.random() * 9000);
+            localID = `BALDI-${randomNum}`;
+            localStorage.setItem('baldi_player_id', localID);
+        }
+        return localID;
+    }
+    const PLAYER_ID = getOrCreatePlayerID();
+    document.getElementById('my-id').innerText = PLAYER_ID;
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    let score = 0; let anger = 0; let currentQuestion = ""; let correctAnswer = 0;
+    let isGlitching = false; let baldiY = 200; let baldiScale = 1.0; let rulerAngle = 0;
+    let activeCharacter = "none"; let playtimeJumps = 0;
+    
+    let isDuelActive = false;
+    let duelTimer = null;
+    let duelTimeLeft = 30;
+    let currentChallengerId = null;
+    let opponentId = "RAKİP";
+    let lastOpponentScore = 0;
+
+    const banner = document.getElementById('event-banner');
+    const effectText = document.getElementById('active-effect');
+    const submitBtn = document.getElementById('submit-btn');
+
+    function makeQuestion() {
+        if (anger >= 2) { currentQuestion = "ERROR: █▟▛█"; correctAnswer = 0; return; }
+        let n1 = Math.floor(Math.random() * 10) + 3;
+        let n2 = Math.floor(Math.random() * 9) + 2;
+        let op = Math.random() > 0.5 ? '+' : '-';
+        if (score > 4 && Math.random() > 0.6) op = '*';
+
+        if (op === '+') correctAnswer = n1 + n2;
+        if (op === '-') { if(n1<n2)[n1,n2]=[n2,n1]; correctAnswer = n1 - n2; }
+        if (op === '*') correctAnswer = n1 * n2;
+
+        currentQuestion = `${n1} ${op} ${n2} = ?`;
+        if (Math.random() < 0.35 && activeCharacter === "none") triggerRandomCharacter();
+    }
+
+    function triggerRandomCharacter() {
+        const chars = ["principal", "playtime", "bully"];
+        activeCharacter = chars[Math.floor(Math.random() * chars.length)];
+        if (activeCharacter === "principal") {
+            banner.innerText = "MÜDÜR: 'Koridorda koşmak yok!' (3 sn kilit)"; banner.style.display = "block";
+            effectText.innerText = "MÜDÜR CEZASI!"; submitBtn.disabled = true;
+            setTimeout(() => { submitBtn.disabled = false; clearCharacter(); }, 3000);
+        } else if (activeCharacter === "playtime") {
+            playtimeJumps = 3; banner.innerText = "PLAYTIME: 'Hadi oynayalım!' [SPACE TUŞUNA 3 KEZ BAS]";
+            banner.style.display = "block"; effectText.innerText = "İP ATLAMACA!";
+        } else if (activeCharacter === "bully") {
+            banner.innerText = "ZORBA: 'Geçiş paralı!' [RÜŞVET İÇİN GİR'E BAS (-1 PUAN)]";
+            banner.style.display = "block"; effectText.innerText = "ZORBA ENGELİ!";
+        }
+    }
+
+    function clearCharacter() { activeCharacter = "none"; banner.style.display = "none"; effectText.innerText = "KORİDOR TEMİZ"; }
+
+    window.addEventListener("keydown", function(e) {
+        if (activeCharacter === "playtime" && e.code === "Space") {
+            playtimeJumps--; banner.innerText = `PLAYTIME: Zıpla! Kalan: ${playtimeJumps}`;
+            if (playtimeJumps <= 0) clearCharacter();
+        }
+    });
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#dfdfb0"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#8b8b6d"; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(250, 150); ctx.lineTo(550, 150); ctx.lineTo(800, 0); ctx.fill();
+        ctx.fillStyle = "#5c9c5c"; ctx.beginPath(); ctx.moveTo(0, canvas.height); ctx.lineTo(250, 300); ctx.lineTo(550, 300); ctx.lineTo(800, canvas.height); ctx.fill();
+        ctx.fillStyle = "#111"; ctx.strokeStyle = "#ff0000"; ctx.lineWidth = 4; ctx.fillRect(150, 30, 500, 90); ctx.strokeRect(150, 30, 500, 90);
+        ctx.fillStyle = isGlitching ? "#ff0000" : "#00ff00"; ctx.font = "16px 'Press Start 2P'"; ctx.textAlign = "center"; ctx.fillText(currentQuestion, canvas.width/2, 85);
+
+        let shakeX = isGlitching ? (Math.random() - 0.5) * 20 : 0;
+        let shakeY = isGlitching ? (Math.random() - 0.5) * 20 : 0;
+
+        ctx.save(); ctx.translate(canvas.width / 2 + shakeX - 60, baldiY + shakeY); ctx.scale(baldiScale, baldiScale);
+        ctx.fillStyle = "#00b300"; ctx.fillRect(-35, 20, 70, 120); ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.strokeRect(-35, 20, 70, 120); ctx.fillRect(-55, 20, 20, 80); ctx.strokeRect(-55, 20, 20, 80);
+        ctx.fillStyle = "#fbd3a1"; ctx.beginPath(); ctx.arc(0, -20, 35, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(-12, -25, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(12, -25, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(-12, -25, 3, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(12, -25, 3, 0, Math.PI * 2); ctx.fill();
+        if (anger >= 1) { ctx.beginPath(); ctx.arc(0, -2, 12, 0, Math.PI, true); ctx.fill(); } else { ctx.fillRect(-10, -5, 20, 4); }
+        ctx.save(); ctx.translate(-45, 40); ctx.rotate(rulerAngle * Math.PI / 180); ctx.fillStyle = "#d4af37"; ctx.fillRect(-80, -6, 80, 12); ctx.strokeRect(-80, -6, 80, 12); ctx.restore(); ctx.restore();
+
+        if (activeCharacter !== "none") {
+            ctx.save(); ctx.translate(canvas.width / 2 + 120, 240);
+            if (activeCharacter === "principal") { ctx.fillStyle = "#000080"; ctx.fillRect(-25, 0, 50, 110); ctx.strokeRect(-25, 0, 50, 110); ctx.fillStyle = "#fbd3a1"; ctx.beginPath(); ctx.arc(0, -30, 25, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#fff"; ctx.font = "10px 'Press Start 2P'"; ctx.fillText("MÜDÜR", -25, -70); } 
+            else if (activeCharacter === "playtime") { ctx.fillStyle = "#ff0000"; ctx.fillRect(-20, 20, 40, 90); ctx.strokeRect(-20, 20, 40, 90); ctx.fillStyle = "#fbd3a1"; ctx.beginPath(); ctx.arc(0, -10, 22, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 60, 40, 0, Math.PI); ctx.stroke(); } 
+            else if (activeCharacter === "bully") { ctx.fillStyle = "#ff6600"; ctx.fillRect(-40, -10, 80, 120); ctx.strokeRect(-40, -10, 80, 120); ctx.fillStyle = "#fbd3a1"; ctx.beginPath(); ctx.arc(0, -40, 25, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+            ctx.restore();
+        }
+        requestAnimationFrame(draw);
+    }
+
+    function submitAnswer() {
+        if (activeCharacter === "playtime") return;
+        if (activeCharacter === "bully") { score = Math.max(0, score - 1); updateLiveScoreUI(); clearCharacter(); document.getElementById('ans').value = ""; makeQuestion(); return; }
+
+        const input = document.getElementById('ans'); let val = parseInt(input.value); if(isNaN(val)) return;
+        if (val === correctAnswer) { 
+            score++; 
+            updateLiveScoreUI();
+            rulerAngle = -45; setTimeout(() => { rulerAngle = 0; }, 120); 
+        } 
+        else { anger++; document.getElementById('anger').innerText = anger; isGlitching = true; rulerAngle = 85; baldiScale += 0.4; baldiY -= 15; setTimeout(() => { isGlitching = false; rulerAngle = 0; }, 350); if (anger >= 3) { setTimeout(triggerJumpscare, 200); return; } }
+        input.value = ""; input.focus(); makeQuestion();
+    }
+
+    function updateLiveScoreUI() {
+        document.getElementById('score').innerText = score;
+        if(isDuelActive) {
+            document.getElementById('live-my-score').innerText = score;
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: "updateLiveScore", id: PLAYER_ID, score: score })
+            });
+        }
+    }
+
+    function triggerJumpscare() { 
+        isGlitching = true; baldiScale = 12.0; 
+        if(isDuelActive) finishDuel();
+        setTimeout(() => { document.getElementById('jumpscare').style.display = 'flex'; document.getElementById('player-name').focus(); }, 200); 
+    }
+
+    async function sendDuelInvite() {
+        const targetId = document.getElementById('target-player-id').value.trim().toUpperCase();
+        if(!targetId || targetId === PLAYER_ID) { alert("Geçerli bir rakip ID'si girin!"); return; }
+        opponentId = targetId;
+        alert(`${targetId} oyuncusuna meydan okuma gönderildi! Yanıt bekleniyor...`);
+        try {
+            await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: "sendChallenge", id: PLAYER_ID, targetId: targetId })
+            });
+        } catch(e) {}
+    }
+
+    async function respondDuel(status) {
+        document.getElementById('notification-popup').style.display = 'none';
+        try {
+            await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: "respondChallenge", id: PLAYER_ID, targetId: currentChallengerId, status: status })
+            });
+            if(status === 'KABUL_EDILDI') {
+                opponentId = currentChallengerId;
+                startDuelCountdown();
+            }
+        } catch(e) {}
+    }
+
+    function startDuelCountdown() {
+        isDuelActive = true;
+        duelTimeLeft = 30;
+        resetGameStatsOnly();
+        
+        document.getElementById('live-arena-bar').style.display = 'flex';
+        document.getElementById('live-my-score').innerText = "0";
+        document.getElementById('live-opp-score').innerText = "0";
+        document.getElementById('live-countdown').innerText = duelTimeLeft;
+
+        clearInterval(duelTimer);
+        duelTimer = setInterval(() => {
+            duelTimeLeft--;
+            document.getElementById('live-countdown').innerText = duelTimeLeft;
+            if(duelTimeLeft <= 0) {
+                finishDuel();
+            }
+        }, 1000);
+    }
+
+    function finishDuel() {
+        clearInterval(duelTimer);
+        isDuelActive = false;
+        document.getElementById('live-arena-bar').style.display = 'none';
+
+        const rTitle = document.getElementById('result-title');
+        const rDetails = document.getElementById('result-details');
+
+        if (score > lastOpponentScore) {
+            rTitle.innerText = "🏆 KAZANDIN!";
+            rTitle.style.color = "#00ff00";
+        } else if (score < lastOpponentScore) {
+            rTitle.innerText = "❌ KAYBETTİN!";
+            rTitle.style.color = "#ff0000";
+        } else {
+            rTitle.innerText = "🤝 BERABERE!";
+            rTitle.style.color = "#ffcc00";
+        }
+
+        rDetails.innerHTML = `Senin Skorun: <span style='font-size:16px;'>${score}</span><br>Rakibin (${opponentId}) Skoru: <span style='font-size:16px;'>${lastOpponentScore}</span>`;
+        document.getElementById('duel-result-screen').style.display = 'flex';
+
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: "endDuel", id: PLAYER_ID })
+        });
+    }
+
+    function closeResultScreen() {
+        document.getElementById('duel-result-screen').style.display = 'none';
+        resetGameStatsOnly();
+    }
+
+    function resetGameStatsOnly() {
+        score = 0; anger = 0; baldiScale = 1.0; baldiY = 200; rulerAngle = 0; isGlitching = false;
+        clearCharacter();
+        document.getElementById('score').innerText = 0;
+        document.getElementById('anger').innerText = 0;
+        makeQuestion();
+    }
+
+    async function syncData() {
+        try {
+            const response = await fetch(`${GOOGLE_SCRIPT_URL}?myId=${PLAYER_ID}`);
+            const data = await response.json();
+            
+            const listElement = document.getElementById('leaderboard-list');
+            listElement.innerHTML = '';
+            data.scores.sort((a, b) => b.score - a.score);
+            let top10 = data.scores.slice(0, 10);
+
+            top10.forEach((item, index) => {
+                const li = document.createElement('li');
+                let isMe = (item.id === PLAYER_ID) ? " <span style='color:#00ff00;'>(SEN)</span>" : "";
+                li.innerHTML = `<div class="list-row"><span>${index + 1}. ${item.name}${isMe}</span><span>${item.score} P</span></div><div class="list-id">ID: ${item.id}</div>`;
+                listElement.appendChild(li);
+            });
+
+            if (data.duel) {
+                if (data.duel.type === "incoming" && !isDuelActive) {
+                    currentChallengerId = data.duel.from;
+                    document.getElementById('notif-text').innerText = `${currentChallengerId} ID'li oyuncu sana meydan okuyor!`;
+                    document.getElementById('notification-popup').style.display = 'flex';
+                } 
+                else if (data.duel.type === "ongoing") {
+                    if(!isDuelActive) {
+                        opponentId = data.duel.opponent;
+                        startDuelCountdown();
+                    }
+                    lastOpponentScore = parseInt(data.duel.oppScore) || 0;
+                    document.getElementById('live-opp-score').innerText = lastOpponentScore;
+                }
+                else if (data.duel.type === "outgoing_rejected") {
+                    alert("Meydan okuma isteğin rakip tarafından reddedildi.");
+                }
+            }
+            document.getElementById('sync-status').innerText = "Canlı akış aktif.";
+        } catch (err) {
+            document.getElementById('sync-status').innerText = "Bağlantı açık.";
+        }
+    }
+
+    async function saveGlobalScore() {
+        const nameInput = document.getElementById('player-name');
+        let pName = nameInput.value.trim().toUpperCase();
+        if(pName === "") pName = "ANONİM";
+        const saveBtn = document.getElementById('save-btn');
+        saveBtn.disabled = true;
+
+        try {
+            await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: "saveScore", id: PLAYER_ID, name: pName, score: score })
+            });
+            setTimeout(syncData, 1000); 
+        } catch (e) {}
+
+        saveBtn.disabled = false;
+        nameInput.value = "";
+        document.getElementById('jumpscare').style.display = 'none';
+        resetGameStatsOnly();
+    }
+
+    document.getElementById('ans').addEventListener("keyup", function(e) { if (e.key === "Enter") submitAnswer(); });
+
+    syncData();
+    makeQuestion();
+    draw();
+    setInterval(syncData, 3000);
+</script>
+
+</body>
+</html>
